@@ -179,10 +179,10 @@ else (JANSSON_FOUND)
 endif (JANSSON_FOUND)
 
 
-add_subdirectory(src)
-add_subdirectory(examples)
-add_subdirectory(tests)
-add_subdirectory(docs)
+#add_subdirectory(src)
+#add_subdirectory(examples)
+#add_subdirectory(tests)
+#add_subdirectory(docs)
 
 add_custom_target(pretty
     "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_SOURCE_DIR}/cmake_pretty.cmake")
