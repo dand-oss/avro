@@ -151,8 +151,8 @@ else (SNAPPY_FOUND AND ZLIB_FOUND)
     message("Disabled snappy codec. libsnappy not found or zlib not found.")
 endif (SNAPPY_FOUND AND ZLIB_FOUND)
 
-find_package(PkgConfig)
-pkg_check_modules(LZMA liblzma)
+
+include(FindLibLZMA)
 if (LZMA_FOUND)
     set(LZMA_PKG liblzma)
     add_definitions(-DLZMA_CODEC)
@@ -166,10 +166,10 @@ else (LZMA_FOUND)
 endif (LZMA_FOUND)
 
 set(CODEC_LIBRARIES ${ZLIB_LIBRARIES} ${LZMA_LIBRARIES} ${SNAPPY_LIBRARIES})
-set(CODEC_PKG "@ZLIB_PKG@ @LZMA_PKG@ @SNAPPY_PKG@")
+set(CODEC_PKG "${ZLIB_PKG} ${LZMA_PKG} ${SNAPPY_PKG}")
 
 # Jansson JSON library
-pkg_check_modules(JANSSON jansson>=2.3)
+include(FindJansson)
 if (JANSSON_FOUND)
     set(JANSSON_PKG libjansson)
     include_directories(${JANSSON_INCLUDE_DIR})
@@ -179,7 +179,7 @@ else (JANSSON_FOUND)
 endif (JANSSON_FOUND)
 
 
-#add_subdirectory(src)
+add_subdirectory(src)
 #add_subdirectory(examples)
 #add_subdirectory(tests)
 #add_subdirectory(docs)
