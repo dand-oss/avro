@@ -33,7 +33,10 @@ extern "C" {
 #include "config.h"
 #endif
 
-#ifdef _WIN32
+#if _MSC_VER>=1900
+// vs 2015 defines snprintf
+#define STDC99
+#elif _WIN32
 #define snprintf _snprintf
 #endif
 

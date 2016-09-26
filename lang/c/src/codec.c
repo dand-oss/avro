@@ -24,6 +24,7 @@
 #  elif defined(__FreeBSD__)
 #    include <sys/endian.h>
 #    define __bswap_32 bswap32
+#  elif _WIN32
 #  else
 #    include <byteswap.h>
 #  endif
@@ -108,7 +109,7 @@ static int encode_snappy(avro_codec_t c, void * data, int64_t len)
 	if (!c->block_data) {
 		c->block_data = avro_malloc(outlen+4);
 		c->block_size = outlen+4;
-	} else if (c->block_size < (int64_t) (outlen+4)) {
+	} else if (c->block_size < static_cast<int64_t>(outlen+4)) {
             c->block_data = avro_realloc(c->block_data, c->block_size, (outlen+4));
 		c->block_size = outlen+4;
 	}
@@ -118,14 +119,14 @@ static int encode_snappy(avro_codec_t c, void * data, int64_t len)
 		return 1;
 	}
 
-        if (snappy_compress(data, len, c->block_data, &outlen) != SNAPPY_OK)
+        if (snappy_compress(reinterpret_cast<const char*>(data), len, reinterpret_cast<char*>(c->block_data), &outlen) != SNAPPY_OK)
         {
                 avro_set_error("Error compressing block with Snappy");
 		return 1;
 	}
 
-        crc = __bswap_32(crc32(0, data, len));
-        memcpy(c->block_data+outlen, &crc, 4);
+        crc = _byteswap_ulong(crc32(0, reinterpret_cast<const Bytef*>(data), len));
+        memcpy(reinterpret_cast<char*>(c->block_data)+outlen, &crc, 4);
         c->used_size = outlen+4;
 
 	return 0;
@@ -136,7 +137,7 @@ static int decode_snappy(avro_codec_t c, void * data, int64_t len)
         uint32_t crc;
         size_t outlen;
 
-        if (snappy_uncompressed_length(data, len-4, &outlen) != SNAPPY_OK) {
+        if (snappy_uncompressed_length(reinterpret_cast<const char*>(data), len-4, &outlen) != SNAPPY_OK) {
 		avro_set_error("Uncompressed length error in snappy");
 		return 1;
         }
@@ -155,13 +156,13 @@ static int decode_snappy(avro_codec_t c, void * data, int64_t len)
 		return 1;
 	}
 
-        if (snappy_uncompress(data, len-4, c->block_data, &outlen) != SNAPPY_OK)
+        if (snappy_uncompress(reinterpret_cast<const char*>(data), len-4, reinterpret_cast<char*>(c->block_data), &outlen) != SNAPPY_OK)
         {
                 avro_set_error("Error uncompressing block with Snappy");
 		return 1;
 	}
 
-        crc = __bswap_32(crc32(0, c->block_data, outlen));
+        crc = _byteswap_ulong(crc32(0, reinterpret_cast<const Bytef*>(c->block_data), outlen));
         if (memcmp(&crc, (char*)data+len-4, 4))
         {
                 avro_set_error("CRC32 check failure uncompressing block with Snappy");
@@ -246,7 +247,7 @@ codec_deflate(avro_codec_t codec)
 static int encode_deflate(avro_codec_t c, void * data, int64_t len)
 {
 	int err;
-	int64_t defl_len = compressBound((uLong)len * 1.2);
+	const int64_t defl_len = compressBound((uLong)len * 1.2);
 
 	if (!c->block_data) {
 		c->block_data = avro_malloc(defl_len);
@@ -266,10 +267,10 @@ static int encode_deflate(avro_codec_t c, void * data, int64_t len)
 
 	z_stream *s = codec_data_deflate_stream(c->codec_data);
 
-	s->next_in = (Bytef*)data;
-	s->avail_in = (uInt)len;
+	s->next_in = static_cast<Bytef*>(data);
+	s->avail_in = static_cast<uInt>(len);
 
-	s->next_out = c->block_data;
+	s->next_out = reinterpret_cast<Bytef*>(c->block_data);
 	s->avail_out = (uInt)c->block_size;
 
 	s->total_out = 0;
@@ -313,10 +314,10 @@ static int decode_deflate(avro_codec_t c, void * data, int64_t len)
 
 	c->used_size = 0;
 
-	s->next_in = data;
+	s->next_in = reinterpret_cast<Bytef*>(data);
 	s->avail_in = len;
 
-	s->next_out = c->block_data;
+	s->next_out = reinterpret_cast<Bytef*>(c->block_data);
 	s->avail_out = c->block_size;
 
 	s->total_out = 0;
@@ -337,7 +338,7 @@ static int decode_deflate(avro_codec_t c, void * data, int64_t len)
 		if (err == Z_BUF_ERROR)
 		{
 			c->block_data = avro_realloc(c->block_data, c->block_size, c->block_size * 2);
-			s->next_out = c->block_data + s->total_out;
+			s->next_out = reinterpret_cast<Bytef*>(c->block_data) + s->total_out;
 			s->avail_out += c->block_size;
 			c->block_size = c->block_size * 2;
 		}

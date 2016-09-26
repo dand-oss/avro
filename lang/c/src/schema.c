@@ -74,7 +74,7 @@ static int is_avro_id(const char *name)
  * namespace (as a newly allocated buffer using Avro's allocator). */
 static char *split_namespace_name(const char *fullname, const char **name_out)
 {
-	char *last_dot = strrchr(fullname, '.');
+	const char *last_dot = strrchr(fullname, '.');
 	if (last_dot == NULL) {
 		*name_out = fullname;
 		return NULL;
@@ -145,8 +145,8 @@ static void avro_schema_free(avro_schema_t schema)
 			break;
 
 		case AVRO_ENUM:{
-				struct avro_enum_schema_t *enump;
-				enump = avro_schema_to_enum(schema);
+				struct avro_enum_schema_t *
+				    enump = avro_schema_to_enum(schema);
 				avro_str_free(enump->name);
 				if (enump->space) {
 					avro_str_free(enump->space);
@@ -160,8 +160,8 @@ static void avro_schema_free(avro_schema_t schema)
 			break;
 
 		case AVRO_FIXED:{
-				struct avro_fixed_schema_t *fixed;
-				fixed = avro_schema_to_fixed(schema);
+				struct avro_fixed_schema_t *
+				    fixed = avro_schema_to_fixed(schema);
 				avro_str_free((char *) fixed->name);
 				if (fixed->space) {
 					avro_str_free((char *) fixed->space);
@@ -171,23 +171,23 @@ static void avro_schema_free(avro_schema_t schema)
 			break;
 
 		case AVRO_MAP:{
-				struct avro_map_schema_t *map;
-				map = avro_schema_to_map(schema);
+				struct avro_map_schema_t *
+				    map = avro_schema_to_map(schema);
 				avro_schema_decref(map->values);
 				avro_freet(struct avro_map_schema_t, map);
 			}
 			break;
 
 		case AVRO_ARRAY:{
-				struct avro_array_schema_t *array;
-				array = avro_schema_to_array(schema);
+				struct avro_array_schema_t *
+				    array = avro_schema_to_array(schema);
 				avro_schema_decref(array->items);
 				avro_freet(struct avro_array_schema_t, array);
 			}
 			break;
 		case AVRO_UNION:{
-				struct avro_union_schema_t *unionp;
-				unionp = avro_schema_to_union(schema);
+				struct avro_union_schema_t *
+				    unionp = avro_schema_to_union(schema);
 				st_foreach(unionp->branches, HASH_FUNCTION_CAST union_free_foreach,
 					   0);
 				st_free_table(unionp->branches);
@@ -197,8 +197,8 @@ static void avro_schema_free(avro_schema_t schema)
 			break;
 
 		case AVRO_LINK:{
-				struct avro_link_schema_t *link;
-				link = avro_schema_to_link(schema);
+				struct avro_link_schema_t *
+				    link = avro_schema_to_link(schema);
 				avro_schema_decref(link->to);
 				avro_freet(struct avro_link_schema_t, link);
 			}
@@ -382,7 +382,7 @@ avro_schema_union_append(const avro_schema_t union_schema,
 	check_param(EINVAL, is_avro_union(union_schema), "union schema");
 	check_param(EINVAL, is_avro_schema(schema), "schema");
 
-	struct avro_union_schema_t *unionp = avro_schema_to_union(union_schema);
+	const struct avro_union_schema_t *unionp = avro_schema_to_union(union_schema);
 	int  new_index = unionp->branches->num_entries;
 	st_insert(unionp->branches, new_index, (st_data_t) schema);
 	const char *name = avro_schema_type_name(schema);
@@ -396,7 +396,7 @@ size_t avro_schema_union_size(const avro_schema_t union_schema)
 {
 	check_param(EINVAL, is_avro_schema(union_schema), "union schema");
 	check_param(EINVAL, is_avro_union(union_schema), "union schema");
-	struct avro_union_schema_t *unionp = avro_schema_to_union(union_schema);
+	const struct avro_union_schema_t *unionp = avro_schema_to_union(union_schema);
 	return unionp->branches->num_entries;
 }
 
@@ -742,12 +742,12 @@ avro_schema_t avro_schema_link_target(avro_schema_t schema)
 }
 
 static const char *
-qualify_name(const char *name, const char *namespace)
+qualify_name(const char *name, const char *name_space)
 {
 	char *full_name;
-	if (namespace != NULL && strchr(name, '.') == NULL) {
-		full_name = avro_str_alloc(strlen(name) + strlen(namespace) + 2);
-		sprintf(full_name, "%s.%s", namespace, name);
+	if (name_space != NULL && strchr(name, '.') == NULL) {
+		full_name = avro_str_alloc(strlen(name) + strlen(name_space) + 2);
+		sprintf(full_name, "%s.%s", name_space, name);
 	} else {
 		full_name = avro_strdup(name);
 	}
@@ -758,21 +758,21 @@ static int
 save_named_schemas(const avro_schema_t schema, st_table *st)
 {
 	const char *name = avro_schema_name(schema);
-	const char *namespace = avro_schema_namespace(schema);
-	const char *full_name = qualify_name(name, namespace);
-	int rval = st_insert(st, (st_data_t) full_name, (st_data_t) schema);
+	const char *name_space = avro_schema_namespace(schema);
+	const char *full_name = qualify_name(name, name_space);
+	const int rval = st_insert(st, reinterpret_cast<st_data_t>( full_name), reinterpret_cast<st_data_t>(schema));
 	return rval;
 }
 
 static avro_schema_t
-find_named_schemas(const char *name, const char *namespace, st_table *st)
+find_named_schemas(const char *name, const char *name_space, st_table *st)
 {
 	union {
 		avro_schema_t schema;
 		st_data_t data;
 	} val;
-	const char *full_name = qualify_name(name, namespace);
-	int rval = st_lookup(st, (st_data_t) full_name, &(val.data));
+	const char *full_name = qualify_name(name, name_space);
+	const int rval = st_lookup(st, (st_data_t) full_name, &(val.data));
 	avro_str_free((char *)full_name);
 	if (rval) {
 		return val.schema;
@@ -784,7 +784,7 @@ find_named_schemas(const char *name, const char *namespace, st_table *st)
 static int
 avro_type_from_json_t(json_t *json, avro_type_t *type,
 		      st_table *named_schemas, avro_schema_t *named_type,
-		      const char *namespace)
+		      const char *name_space)
 {
 	json_t *json_type;
 	const char *type_str;
@@ -835,7 +835,7 @@ avro_type_from_json_t(json_t *json, avro_type_t *type,
 		*type = AVRO_MAP;
 	} else if (strcmp(type_str, "fixed") == 0) {
 		*type = AVRO_FIXED;
-	} else if ((*named_type = find_named_schemas(type_str, namespace, named_schemas))) {
+	} else if ((*named_type = find_named_schemas(type_str, name_space, named_schemas))) {
 		*type = AVRO_LINK;
 	} else {
 		avro_set_error("Unknown Avro \"type\": %s", type_str);
@@ -930,12 +930,12 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 			}
 
 			if (strchr(fullname, '.')) {
-				char *namespace = split_namespace_name(fullname, &name);
-				*schema = avro_schema_record(name, namespace);
-				avro_str_free(namespace);
+				char *name_space = split_namespace_name(fullname, &name);
+				*schema = avro_schema_record(name, name_space);
+				avro_str_free(name_space);
 			} else if (json_is_string(json_namespace)) {
-				const char *namespace = json_string_value(json_namespace);
-				*schema = avro_schema_record(fullname, namespace);
+				const char *name_space = json_string_value(json_namespace);
+				*schema = avro_schema_record(fullname, name_space);
 			} else {
 				*schema = avro_schema_record(fullname, parent_namespace);
 			}
@@ -999,9 +999,9 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 
 	case AVRO_ENUM:
 		{
-			json_t *json_name = json_object_get(json, "name");
-			json_t *json_symbols = json_object_get(json, "symbols");
-			json_t *json_namespace = json_object_get(json, "namespace");
+			const json_t *json_name = json_object_get(json, "name");
+			const json_t *json_symbols = json_object_get(json, "symbols");
+			const json_t *json_namespace = json_object_get(json, "namespace");
 			const char *fullname, *name;
 			unsigned int num_symbols;
 
@@ -1026,13 +1026,13 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 			}
 
 			if (strchr(fullname, '.')) {
-				char *namespace;
-				namespace = split_namespace_name(fullname, &name);
-				*schema = avro_schema_enum_ns(name, namespace);
-				avro_str_free(namespace);
+				char *name_space;
+				name_space = split_namespace_name(fullname, &name);
+				*schema = avro_schema_enum_ns(name, name_space);
+				avro_str_free(name_space);
 			} else if (json_is_string(json_namespace)) {
-				const char *namespace = json_string_value(json_namespace);
-				*schema = avro_schema_enum_ns(fullname, namespace);
+				const char *name_space = json_string_value(json_namespace);
+				*schema = avro_schema_enum_ns(fullname, name_space);
 			} else {
 				*schema = avro_schema_enum_ns(fullname, parent_namespace);
 			}
@@ -1109,7 +1109,7 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 
 	case AVRO_UNION:
 		{
-			unsigned int num_schemas = json_array_size(json);
+			const unsigned int num_schemas = json_array_size(json);
 			avro_schema_t s;
 			if (num_schemas == 0) {
 				avro_set_error("Union type must have at least one branch");
@@ -1143,9 +1143,9 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 
 	case AVRO_FIXED:
 		{
-			json_t *json_size = json_object_get(json, "size");
-			json_t *json_name = json_object_get(json, "name");
-			json_t *json_namespace = json_object_get(json, "namespace");
+			const json_t *json_size = json_object_get(json, "size");
+			const json_t *json_name = json_object_get(json, "name");
+			const json_t *json_namespace = json_object_get(json, "namespace");
 			json_int_t size;
 			const char *fullname, *name;
 			if (!json_is_integer(json_size)) {
@@ -1160,13 +1160,13 @@ avro_schema_from_json_t(json_t *json, avro_schema_t *schema,
 			fullname = json_string_value(json_name);
 
 			if (strchr(fullname, '.')) {
-				char *namespace;
-				namespace = split_namespace_name(fullname, &name);
-				*schema = avro_schema_fixed_ns(name, namespace, (int64_t) size);
-				avro_str_free(namespace);
+				char *name_space;
+				name_space = split_namespace_name(fullname, &name);
+				*schema = avro_schema_fixed_ns(name, name_space, (int64_t) size);
+				avro_str_free(name_space);
 			} else if (json_is_string(json_namespace)) {
-				const char *namespace = json_string_value(json_namespace);
-				*schema = avro_schema_fixed_ns(fullname, namespace, (int64_t) size);
+				const char *name_space = json_string_value(json_namespace);
+				*schema = avro_schema_fixed_ns(fullname, name_space, (int64_t) size);
 			} else {
 				*schema = avro_schema_fixed_ns(fullname, parent_namespace, (int64_t) size);
 			}
@@ -1283,7 +1283,7 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_RECORD:
 		{
-			struct avro_record_schema_t *record_schema =
+			const struct avro_record_schema_t *record_schema =
 			    avro_schema_to_record(schema);
 			new_schema =
 			    avro_schema_record(record_schema->name,
@@ -1305,7 +1305,7 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_ENUM:
 		{
-			struct avro_enum_schema_t *enum_schema =
+			const struct avro_enum_schema_t *enum_schema =
 			    avro_schema_to_enum(schema);
 			new_schema = avro_schema_enum_ns(enum_schema->name,
 					enum_schema->space);
@@ -1323,7 +1323,7 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_FIXED:
 		{
-			struct avro_fixed_schema_t *fixed_schema =
+			const struct avro_fixed_schema_t *fixed_schema =
 			    avro_schema_to_fixed(schema);
 			new_schema =
 			    avro_schema_fixed_ns(fixed_schema->name,
@@ -1334,9 +1334,9 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_MAP:
 		{
-			struct avro_map_schema_t *map_schema =
+			const struct avro_map_schema_t *map_schema =
 			    avro_schema_to_map(schema);
-			avro_schema_t values_copy =
+			const avro_schema_t values_copy =
 			    avro_schema_copy(map_schema->values);
 			if (!values_copy) {
 				return NULL;
@@ -1347,9 +1347,9 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_ARRAY:
 		{
-			struct avro_array_schema_t *array_schema =
+			const struct avro_array_schema_t *array_schema =
 			    avro_schema_to_array(schema);
-			avro_schema_t items_copy =
+			const avro_schema_t items_copy =
 			    avro_schema_copy(array_schema->items);
 			if (!items_copy) {
 				return NULL;
@@ -1360,7 +1360,7 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_UNION:
 		{
-			struct avro_union_schema_t *union_schema =
+			const struct avro_union_schema_t *union_schema =
 			    avro_schema_to_union(schema);
 
 			new_schema = avro_schema_union();
@@ -1384,7 +1384,7 @@ avro_schema_t avro_schema_copy(avro_schema_t schema)
 
 	case AVRO_LINK:
 		{
-			struct avro_link_schema_t *link_schema =
+			const struct avro_link_schema_t *link_schema =
 			    avro_schema_to_link(schema);
 			/*
 			 * TODO: use an avro_schema_copy of to instead of pointing to
@@ -1749,9 +1749,9 @@ static int write_link(avro_writer_t out, const struct avro_link_schema_t *link,
 {
 	int rval;
 	check(rval, avro_write_str(out, "\""));
-	const char *namespace = avro_schema_namespace(link->to);
-	if (namespace && nullstrcmp(namespace, parent_namespace)) {
-		check(rval, avro_write_str(out, namespace));
+	const char *name_space = avro_schema_namespace(link->to);
+	if (name_space && nullstrcmp(name_space, parent_namespace)) {
+		check(rval, avro_write_str(out, name_space));
 		check(rval, avro_write_str(out, "."));
 	}
 	check(rval, avro_write_str(out, avro_schema_name(link->to)));

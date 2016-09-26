@@ -19,7 +19,9 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifdef _WIN32
+#ifdef _MSC_VER
+#include <io.h>
+#elif _WIN32
 #include <unistd.h>
 #endif
 
